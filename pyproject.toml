@@ -1,0 +1,18 @@
+[project]
+name = "real-estate-news-crawler"
+version = "0.1.0"
+description = "This is the crawler tool for vietnamese real estate news"
+authors = [
+    {name = "KawaiButa",email = "21522441@gm.uit.edu.vn"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "selenium (>=4.29.0,<5.0.0)",
+    "requests (>=2.32.3,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
