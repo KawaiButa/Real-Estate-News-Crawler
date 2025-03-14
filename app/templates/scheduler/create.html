@@ -1,0 +1,180 @@
+<!-- app/templates/scheduler/create.html -->
+{% extends "base.html" %}
+
+{% block title %}Create New Schedule{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Create New Schedule</h1>
+        <p class="lead">Define a new scheduled job to run a shell script</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Schedule Details</h5>
+    </div>
+    <div class="card-body">
+        <form action="/scheduler/new" method="post" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Script Selection Method</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="script_selection_method" 
+                           id="selectExisting" value="existing" checked>
+                    <label class="form-check-label" for="selectExisting">
+                        Select Existing Script
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="script_selection_method" 
+                           id="uploadNew" value="upload">
+                    <label class="form-check-label" for="uploadNew">
+                        Upload New Script
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Existing Script Selection -->
+            <div id="existingScriptSection" class="mb-3">
+                <label for="existing_script" class="form-label">Script</label>
+                <select class="form-select" id="existing_script" name="existing_script">
+                    {% for script in available_scripts %}
+                    <option value="{{ script.path }}">{{ script.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">Select an existing shell script from the server</div>
+            </div>
+            
+            <!-- Upload New Script -->
+            <div id="uploadScriptSection" class="mb-3" style="display: none;">
+                <label for="script_file" class="form-label">Upload Script</label>
+                <input type="file" class="form-control" id="script_file" name="script_file" accept=".sh">
+                <div class="form-text">Upload a new shell script (.sh file)</div>
+                
+                <div class="mt-2">
+                    <label for="script_name" class="form-label">Script Name</label>
+                    <input type="text" class="form-control" id="script_name" name="script_name" 
+                           placeholder="my-backup-script">
+                    <div class="form-text">Name for the uploaded script (alphanumeric and hyphens only)</div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="job_id" class="form-label">Job ID (Optional)</label>
+                <input type="text" class="form-control" id="job_id" name="job_id" 
+                       placeholder="my-daily-backup">
+                <div class="form-text">A unique identifier for this job. If left empty, an ID will be generated.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Schedule Type</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="schedule_type" 
+                           id="typeInterval" value="interval" checked>
+                    <label class="form-check-label" for="typeInterval">
+                        Interval (Run every X seconds)
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="schedule_type" 
+                           id="typeCron" value="cron">
+                    <label class="form-check-label" for="typeCron">
+                        Cron (Run on specific schedule)
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Interval settings -->
+            <div id="intervalSettings" class="mb-3 schedule-settings">
+                <label for="interval_seconds" class="form-label">Interval (seconds)</label>
+                <input type="number" class="form-control" id="interval_seconds" name="interval_seconds" 
+                       min="1" value="3600">
+                <div class="form-text">
+                    Common intervals: 60 (1 minute), 3600 (1 hour), 86400 (1 day)
+                </div>
+            </div>
+            
+            <!-- Cron settings -->
+            <div id="cronSettings" class="mb-3 schedule-settings" style="display: none;">
+                <label for="cron_expression" class="form-label">Cron Expression</label>
+                <input type="text" class="form-control" id="cron_expression" name="cron_expression" 
+                       placeholder="* * * * *">
+                <div class="form-text">
+                    Format: minute hour day-of-month month day-of-week
+                    <br>Examples: 
+                    <code>0 * * * *</code> (Every hour at minute 0)
+                    <br><code>0 12 * * *</code> (Daily at 12:00 PM)
+                    <br><code>0 0 * * 0</code> (Weekly on Sunday at midnight)
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Create Schedule</button>
+                <a href="/scheduler/" class="btn btn-outline-secondary ms-2">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle between interval and cron settings
+        const typeInterval = document.getElementById('typeInterval');
+        const typeCron = document.getElementById('typeCron');
+        const intervalSettings = document.getElementById('intervalSettings');
+        const cronSettings = document.getElementById('cronSettings');
+        
+        function updateScheduleTypeVisibility() {
+            if (typeInterval.checked) {
+                intervalSettings.style.display = 'block';
+                cronSettings.style.display = 'none';
+            } else {
+                intervalSettings.style.display = 'none';
+                cronSettings.style.display = 'block';
+            }
+        }
+        
+        typeInterval.addEventListener('change', updateScheduleTypeVisibility);
+        typeCron.addEventListener('change', updateScheduleTypeVisibility);
+        
+        // Toggle between selecting existing script and uploading new one
+        const selectExisting = document.getElementById('selectExisting');
+        const uploadNew = document.getElementById('uploadNew');
+        const existingScriptSection = document.getElementById('existingScriptSection');
+        const uploadScriptSection = document.getElementById('uploadScriptSection');
+        
+        function updateScriptSelectionVisibility() {
+            if (selectExisting.checked) {
+                existingScriptSection.style.display = 'block';
+                uploadScriptSection.style.display = 'none';
+            } else {
+                existingScriptSection.style.display = 'none';
+                uploadScriptSection.style.display = 'block';
+            }
+        }
+        
+        selectExisting.addEventListener('change', updateScriptSelectionVisibility);
+        uploadNew.addEventListener('change', updateScriptSelectionVisibility);
+        
+        // Auto-populate script name from file name
+        const scriptFile = document.getElementById('script_file');
+        const scriptName = document.getElementById('script_name');
+        
+        scriptFile.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                // Get filename without extension
+                let fileName = this.files[0].name;
+                if (fileName.endsWith('.sh')) {
+                    fileName = fileName.slice(0, -3);
+                }
+                // Convert to slug-friendly format
+                fileName = fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+                scriptName.value = fileName;
+            }
+        });
+    });
+</script>
+{% endblock %}

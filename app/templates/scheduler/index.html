@@ -1,0 +1,149 @@
+<!-- app/templates/scheduler/index.html -->
+{% extends "base.html" %}
+
+{% block title %}Scheduler Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>Scheduler Dashboard</h1>
+        <p class="lead">Manage and monitor your scheduled shell scripts</p>
+    </div>
+    <div class="col-auto">
+        <a href="/scheduler/new" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Schedule
+        </a>
+    </div>
+</div>
+
+{% if schedules %}
+<div class="card">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Scheduled Jobs</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Job ID</th>
+                    <th>Script Path</th>
+                    <th>Schedule Type</th>
+                    <th>Next Run</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for schedule in schedules %}
+                <tr>
+                    <td>{{ schedule.job_id }}</td>
+                    <td><code>{{ schedule.script_path }}</code></td>
+                    <td>
+                        <span class="badge bg-{{ 'primary' if schedule.schedule_type == 'interval' else 'info' }}">
+                            {{ schedule.schedule_type }}
+                        </span>
+                    </td>
+                    <td>{{ schedule.next_run_time }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button 
+                                onclick="executeJob('{{ schedule.job_id }}')" 
+                                class="btn btn-outline-primary"
+                                title="Run now"
+                            >
+                                <i class="bi bi-play-fill"></i> Run
+                            </button>
+                            <button 
+                                onclick="deleteJob('{{ schedule.job_id }}')" 
+                                class="btn btn-outline-danger"
+                                title="Delete schedule"
+                            >
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Execution Result Modal -->
+<div class="modal fade" id="executionResultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Execution Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Return Code</label>
+                    <input type="text" class="form-control" id="resultReturnCode" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Standard Output</label>
+                    <textarea class="form-control" id="resultStdout" rows="5" readonly></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Standard Error</label>
+                    <textarea class="form-control" id="resultStderr" rows="5" readonly></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="alert alert-info">
+    <h4 class="alert-heading">No scheduled jobs found</h4>
+    <p>You haven't created any scheduled jobs yet. Click the "New Schedule" button to get started.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function executeJob(jobId) {
+        try {
+            const response = await fetch(`/scheduler/schedules/${jobId}/execute`, {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            // Populate and show modal
+            document.getElementById('resultReturnCode').value = result.return_code;
+            document.getElementById('resultStdout').value = result.stdout;
+            document.getElementById('resultStderr').value = result.stderr;
+            
+            const modal = new bootstrap.Modal(document.getElementById('executionResultModal'));
+            modal.show();
+        } catch (error) {
+            alert('Error executing job: ' + error.message);
+        }
+    }
+    
+    async function deleteJob(jobId) {
+        if (confirm(`Are you sure you want to delete job: ${jobId}?`)) {
+            try {
+                const response = await fetch(`/scheduler/schedules/${jobId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(`Error: ${error.detail}`);
+                }
+            } catch (error) {
+                alert('Error deleting job: ' + error.message);
+            }
+        }
+    }
+</script>
+{% endblock %}
